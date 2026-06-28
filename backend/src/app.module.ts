@@ -7,6 +7,7 @@ import configuration from './common/config/configuration';
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './common/health/health.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { RidesModule } from './modules/rides/rides.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
     PrismaModule,
     HealthModule,
     PaymentsModule,
+    RidesModule,
   ],
   providers: [
     {
