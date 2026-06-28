@@ -1,0 +1,165 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis]
+}
+
+enum UserRole {
+  PASSENGER
+  DRIVER
+  ADMIN
+}
+
+enum DriverStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum RideStatus {
+  SEARCHING
+  ACCEPTED
+  DRIVER_ARRIVED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentProvider {
+  MVOLA
+  AIRTEL
+  ORANGE
+  PAYPAL
+  CASH
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  EXPIRED
+  REFUNDED
+}
+
+model User {
+  id    String   @id @default(uuid())
+  phone String   @unique
+  name  String
+  email String?
+  avatar String?
+  role  UserRole @default(PASSENGER)
+  rating Float   @default(5.0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  driver           Driver?
+  ridesAsPassenger Ride[]   @relation("PassengerRides")
+  ratingsGiven     Rating[] @relation("RatingsGiven")
+  ratingsReceived  Rating[] @relation("RatingsReceived")
+
+  @@index([role])
+}
+
+model Driver {
+  id              String       @id @default(uuid())
+  userId          String       @unique
+  vehicleBrand    String
+  vehicleModel    String
+  vehicleColor    String
+  licensePlate    String       @unique
+  licenseDoc      String
+  registrationDoc String
+  status          DriverStatus @default(PENDING)
+  isOnline        Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+
+  user     User            @relation(fields: [userId], references: [id])
+  location DriverLocation?
+  rides    Ride[]          @relation("DriverRides")
+
+  @@index([status, isOnline])
+}
+
+model DriverLocation {
+  id        String   @id @default(uuid())
+  driverId  String   @unique
+  lat       Float
+  lng       Float
+  updatedAt DateTime @updatedAt
+
+  driver Driver @relation(fields: [driverId], references: [id])
+
+  @@index([lat, lng])
+}
+
+model Ride {
+  id              String          @id @default(uuid())
+  passengerId     String
+  driverId        String?
+  status          RideStatus      @default(SEARCHING)
+  pickupLat       Float
+  pickupLng       Float
+  dropoffLat      Float
+  dropoffLng      Float
+  pickupAddress   String
+  dropoffAddress  String
+  distanceKm      Float?
+  durationMin     Float?
+  priceAriary     Float
+  priceUsd        Float?
+  paymentMethod   PaymentProvider
+  paymentStatus   PaymentStatus   @default(PENDING)
+  surgeMultiplier Float           @default(1.0)
+  createdAt       DateTime        @default(now())
+  startedAt       DateTime?
+  completedAt     DateTime?
+
+  passenger User     @relation("PassengerRides", fields: [passengerId], references: [id])
+  driver    Driver?  @relation("DriverRides", fields: [driverId], references: [id])
+  payment   Payment?
+  ratings   Rating[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([pickupLat, pickupLng])
+  @@index([dropoffLat, dropoffLng])
+}
+
+model Payment {
+  id          String          @id @default(uuid())
+  rideId      String          @unique
+  amount      Float
+  currency    String          @default("MGA")
+  provider    PaymentProvider
+  providerRef String?         @unique
+  externalRef String?
+  status      PaymentStatus   @default(PENDING)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  ride Ride @relation(fields: [rideId], references: [id])
+
+  @@index([status])
+}
+
+model Rating {
+  id         String   @id @default(uuid())
+  rideId     String
+  fromUserId String
+  toUserId   String
+  score      Int
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  ride     Ride @relation(fields: [rideId], references: [id])
+  fromUser User @relation("RatingsGiven", fields: [fromUserId], references: [id])
+  toUser   User @relation("RatingsReceived", fields: [toUserId], references: [id])
+
+  @@index([toUserId])
+}
