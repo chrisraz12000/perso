@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import configuration from './common/config/configuration';
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './common/health/health.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 
 @Module({
   imports: [
@@ -12,6 +14,7 @@ import { HealthModule } from './common/health/health.module';
       isGlobal: true,
       load: [configuration],
     }),
+    EventEmitterModule.forRoot(),
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
@@ -20,6 +23,7 @@ import { HealthModule } from './common/health/health.module';
     ]),
     PrismaModule,
     HealthModule,
+    PaymentsModule,
   ],
   providers: [
     {
